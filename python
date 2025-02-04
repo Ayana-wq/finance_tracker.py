@@ -1,0 +1,73 @@
+import sqlite3
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Connect to SQLite database
+conn = sqlite3.connect("finance.db")
+cursor = conn.cursor()
+
+# Create table if not exists
+cursor.execute('''CREATE TABLE IF NOT EXISTS transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type TEXT, amount REAL, category TEXT, date TEXT)''')
+conn.commit()
+
+def add_transaction():
+    """Add a new income or expense transaction."""
+    type_ = input("Type (income/expense): ").lower()
+    amount = float(input("Amount: $"))
+    category = input("Category (Food, Rent, Transport, etc.): ")
+    date = input("Date (YYYY-MM-DD): ")
+    
+    cursor.execute("INSERT INTO transactions (type, amount, category, date) VALUES (?, ?, ?, ?)", 
+                   (type_, amount, category, date))
+    conn.commit()
+    print("✅ Transaction added!")
+
+def view_transactions():
+    """Display all transactions."""
+    df = pd.read_sql("SELECT * FROM transactions", conn)
+    print("\n📊 Transaction History:")
+    print(df)
+
+def analyze_spending():
+    """Show a pie chart of expenses by category."""
+    df = pd.read_sql("SELECT category, SUM(amount) as total FROM transactions WHERE type='expense' GROUP BY category", conn)
+    
+    if df.empty:
+        print("No expenses recorded yet.")
+        return
+    
+    plt.figure(figsize=(6,6))
+    plt.pie(df['total'], labels=df['category'], autopct='%1.1f%%', startangle=140)
+    plt.title("Spending Breakdown 💰")
+    plt.show()
+
+def menu():
+    """Main menu."""
+    while True:
+        print("\n📌 Personal Finance Tracker")
+        print("1️⃣ Add Transaction")
+        print("2️⃣ View Transactions")
+        print("3️⃣ Analyze Spending")
+        print("4️⃣ Exit")
+        choice = input("Select an option: ")
+        
+        if choice == "1":
+            add_transaction()
+        elif choice == "2":
+            view_transactions()
+        elif choice == "3":
+            analyze_spending()
+        elif choice == "4":
+            print("Goodbye! 👋")
+            break
+        else:
+            print("Invalid choice. Try again.")
+
+# Run the app
+if __name__ == "__main__":
+    menu()
+
+# Close database connection when done
+conn.close()
